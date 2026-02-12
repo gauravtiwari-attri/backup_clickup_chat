@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 ClickUp Chat Backup Tool
+Author: Gaurav Tiwari
+
 Backs up ALL conversations from a ClickUp workspace:
   - Channels (public/private group chats)
   - Direct Messages (personal 1-on-1 chats)

@@ -2,6 +2,8 @@
 
 Backup **all** conversations from your ClickUp workspace — channels, personal DMs, group DMs, and thread replies.
 
+**Author:** Gaurav Tiwari
+
 ## What Gets Backed Up
 
 | Type | Description |
