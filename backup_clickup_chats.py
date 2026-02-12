@@ -417,6 +417,31 @@ def resolve_channel_name(channel, members):
     return ch_name if ch_name else f"channel-{channel.get('id', 'unknown')}"
 
 
+# ─── User Resolution ─────────────────────────────────────────────────────────
+
+def enrich_message_with_user(msg, members):
+    """Add user_name and user_email fields to a message based on user_id."""
+    uid = str(msg.get("user_id", ""))
+    if uid and uid in members:
+        msg["user_name"] = members[uid]["name"]
+        msg["user_email"] = members[uid]["email"]
+    else:
+        # Fallback: try creator/user dict if present
+        user = msg.get("creator", msg.get("user", {})) or {}
+        msg["user_name"] = user.get("username", user.get("name", f"user_{uid}" if uid else "Unknown"))
+        msg["user_email"] = user.get("email", "")
+    return msg
+
+
+def enrich_messages(messages, members):
+    """Enrich all messages (and their replies) with user name/email."""
+    for msg in messages:
+        enrich_message_with_user(msg, members)
+        for reply in msg.get("replies", []):
+            enrich_message_with_user(reply, members)
+    return messages
+
+
 # ─── Export Helpers ──────────────────────────────────────────────────────────
 
 def extract_text(content):
@@ -508,7 +533,6 @@ def save_channels_csv(all_channel_data, filepath):
 
 def _write_message_row(writer, ch_name, ch_type, msg, is_reply=False, parent_id=""):
     """Write a single message row to CSV."""
-    user = msg.get("creator", msg.get("user", {})) or {}
     content = msg.get("content", msg.get("text", ""))
     text = extract_text(content)
 
@@ -526,8 +550,8 @@ def _write_message_row(writer, ch_name, ch_type, msg, is_reply=False, parent_id=
         ch_type,
         msg.get("id", ""),
         format_timestamp(msg.get("date_created", msg.get("date", ""))),
-        user.get("username", user.get("name", "")),
-        user.get("email", ""),
+        msg.get("user_name", ""),
+        msg.get("user_email", ""),
         text,
         "Yes" if is_reply else "No",
         parent_id,
@@ -684,6 +708,9 @@ def main():
                     total_replies += len(replies)
                     if replies:
                         print(f"      Thread: {len(replies)} replies on message {msg_id}")
+
+        # Enrich messages with user names before saving
+        enrich_messages(messages, members)
 
         all_channel_data.append({
             "channel_id": ch_id,
